@@ -9,7 +9,7 @@
   :root { --border:#d9dde5; --bg:#f6f7f9; --card:#fff; --text:#222; --sub:#666; --accent:#4f6bed; }
   * { box-sizing:border-box; }
   body { margin:0; font-family:system-ui,-apple-system,"Segoe UI","Noto Sans JP",sans-serif; color:var(--text); background:var(--bg); }
-  main { max-width:1200px; margin:24px auto; padding:0 16px 48px; }
+  main { max-width:1250px; margin:24px auto; padding:0 16px 48px; }
   
   /* Tabs UI */
   .tab-bar-container { display:flex; align-items:center; background:#e4e7ed; padding:6px 6px 0; border-radius:12px 12px 0 0; border:1px solid var(--border); overflow-x:auto; gap:4px; }
@@ -42,9 +42,9 @@
   .small { width:90px !important; min-width:70px !important; }
   .person { min-width:130px !important; }
   
-  .time-slot-list { display:flex; flex-direction:column; gap:6px; min-width:230px; }
+  .time-slot-list { display:flex; flex-direction:column; gap:6px; min-width:240px; }
   .time-slot-row { display:flex; gap:5px; align-items:center; }
-  .time-slot-row select { width:105px; min-width:95px; }
+  .time-slot-row select { width:110px; min-width:100px; }
   .add-time-slot { background:#eef0f5; color:#333; padding:5px 9px; font-size:13px; }
   
   .controls { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; align-items:center; }
@@ -56,7 +56,7 @@
   .matrix-wrap { overflow:auto; margin-top:14px; }
   .shift-matrix { border-collapse:collapse; min-width:max-content; width:100%; }
   .shift-matrix th, .shift-matrix td { border:1px solid var(--border); padding:8px 10px; text-align:center; white-space:nowrap; font-size:13px; }
-  .shift-matrix th:first-child, .shift-matrix td:first-child { position:sticky; left:0; background:#fff; z-index:2; text-align:left; min-width:170px; }
+  .shift-matrix th:first-child, .shift-matrix td:first-child { position:sticky; left:0; background:#fff; z-index:2; text-align:left; min-width:180px; }
   .shift-matrix thead th { position:sticky; top:0; z-index:3; background:#f4f5f8; }
   .matrix-runner { background:#e8f0fe; color:#174ea6; font-weight:600; }
   .matrix-supporter { background:#f1f3f4; color:#333; font-weight:500; }
@@ -76,8 +76,11 @@
 </head>
 <body>
 <main>
-  <h1 class="text-2xl font-bold mb-1">1日シフト管理ツール</h1>
-  <p class="lead">情報を入力すると自動でマトリックス表がリアルタイム更新されます。人数に応じたカラーハイライトや詳細設定の※印に対応しています。</p>
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+    <h1 class="text-2xl font-bold">1日シフト管理ツール</h1>
+    <button type="button" class="secondary" id="clearStorageBtn" style="font-size:13px; padding:6px 10px;">保存データをリセット</button>
+  </div>
+  <p class="lead">並走者・支援者の基本情報（名前、総合力、内部値、先頭値）はタブをまたいでも共通で保持されブラウザに自動保存されます。スケジュールや詳細設定はタブごとに管理されます。</p>
 
   <!-- Tabs Navigation Bar -->
   <div class="tab-bar-container" id="tabBar">
@@ -90,10 +93,10 @@
     
     <!-- Section 1: Event Period -->
     <section class="card">
-      <h2 class="text-lg font-semibold mb-3">1. イベント期間（d日/mm:00-mm:00形式）</h2>
+      <h2 class="text-lg font-semibold mb-3">1. イベント期間</h2>
       <div class="row">
         <div>
-          <label>日 (d日)</label>
+          <label>日</label>
           <select id="targetDay" class="event-input"></select>
         </div>
         <div>
@@ -106,7 +109,7 @@
         </div>
       </div>
       <div class="controls">
-        <button type="button" class="secondary" id="toggleYM">年・月を変更</button>
+        <button type="button" class="secondary" id="toggleYM">年・月を入力</button>
       </div>
       <div id="eventYM" class="row hidden" style="margin-top:12px;">
         <div>
@@ -121,17 +124,17 @@
       <div id="eventSummary" class="event-summary">イベント期間：-</div>
     </section>
 
-    <!-- Section 2: Runners (並走者) -->
+    <!-- Section 2: Runners (並走者 - 共通マスタ) -->
     <section class="card">
       <h2 class="text-lg font-semibold mb-1">2. 並走者</h2>
-      <p class="hint mb-3">名前、総合力、プレイ予定時間（00:00〜28:00のプルダウン）を入力します。総合力やプレイ予定が空欄でも進められます。</p>
+      <p class="hint mb-3">名前・総合力はタブをまたいでも共通保持されます。プレイ予定時間はこのタブごとに設定できます。</p>
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
               <th style="width:200px;">名前</th>
               <th style="width:140px;">総合力</th>
-              <th>プレイ予定（時間のみ）</th>
+              <th>プレイ予定時間</th>
               <th style="width:70px;">操作</th>
             </tr>
           </thead>
@@ -143,18 +146,18 @@
       </div>
     </section>
 
-    <!-- Section 3: Supporters (支援者) -->
+    <!-- Section 3: Supporters (支援者 - 共通マスタ) -->
     <section class="card">
       <h2 class="text-lg font-semibold mb-1">3. 支援者</h2>
       <p class="hint mb-3">
-        名前・先頭値・内部値・総合力・実効値・シフト可能時間（00:00〜28:00）を入力。<br>
-        <span style="color:#b33; font-weight:600;">⚠ 先頭値・内部値から算出できる場合は算出値が優先されます。直接入力も可能です。WLの場合は33.6万以上の総合力を入力しないでください。</span>
+        名前・先頭値・内部値・総合力はタブをまたいでも共通保持されます。実効値は算出値優先（直接入力も可）。シフト可能時間はこのタブごとに設定できます。<br>
+        <span style="color:#b33; font-weight:600;">⚠ WLの場合は33.6万以上の総合力を入力しないでください。</span>
       </p>
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>名前</th><th>先頭値</th><th>内部値</th><th>総合力</th><th>実効値</th><th>シフト可能時間</th><th>詳細設定</th><th>操作</th>
+              <th>名前</th><th>先頭値</th><th>内部値</th><th>総合力</th><th>実効値</th><th>シフト可能時間（このタブ）</th><th>詳細設定</th><th>操作</th>
             </tr>
           </thead>
           <tbody id="supporterBody"></tbody>
@@ -168,14 +171,13 @@
 
     <!-- Section 4: Timetable Generator (マトリックス表) -->
     <section class="card">
-      <h2 class="text-lg font-semibold mb-1">4. タイムテーブル自動作成（リアルタイムプレビュー）</h2>
+      <h2 class="text-lg font-semibold mb-1">4. タイムテーブル</h2>
       <p class="hint mb-3">
-        並走者を上部に、支援者を実効値順に配置したマトリックス表です。最下部の合計人数行は人数に応じて色分けされます（<strong>緑</strong>: 5人ピッタリ / <strong>黄橙</strong>: 5人以下 / <strong>赤</strong>: 5人超）。詳細設定がある名前の後ろの ※印 から下部注記をご確認いただけます。
+        並走者を上部に、支援者を実効値順に配置したマトリックス表です。合計人数行は人数に応じて色分けされます（<strong>緑</strong>: 5人 / <strong>黄橙</strong>: 5人未満 / <strong>赤</strong>: 5人超）。名前の後ろの ※印 から下部注記をご確認いただけます。
       </p>
       <div class="controls">
         <button type="button" class="secondary" id="discordShare">表をエクセル形式でコピー</button>
-        <button type="button" class="danger" id="clearTabData">現在のタブを初期化</button>
-        <span id="saveStatus" class="hint"></span>
+        <button type="button" class="danger" id="clearTabData">このタブのスケジュールを初期化</button>
       </div>
       <div id="result" style="margin-top:14px;"></div>
     </section>
@@ -187,14 +189,49 @@
 const $ = id => document.getElementById(id);
 const pad = n => String(n).padStart(2,'0');
 
-const STORAGE_KEY = 'event_shift_manager_multitab_v5';
+const STORAGE_KEY = 'shift_manager_app_state_v4';
 
+// アプリケーション状態
 let appState = {
   activeTabId: 'tab_1',
+  globalRunners: [],
+  globalSupporters: [],
   tabs: [
-    { id: 'tab_1', title: '1日目', data: null }
+    { 
+      id: 'tab_1', 
+      title: '1日目', 
+      event: { targetDay: '1', startTime: '12:00', endTime: '24:00', year: String(new Date().getFullYear()), month: String(new Date().getMonth()+1), ymOpen: false },
+      runnerSchedules: {}, // runnerId -> [{start, end}]
+      supporterSchedules: {} // supporterId -> { slots: [{start, end}], maxHours, waitOk }
+    }
   ]
 };
+
+function saveStateToLocalStorage(){
+  try{
+    saveCurrentTabState();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+  }catch(e){
+    console.warn('ローカルストレージへの保存に失敗しました:', e);
+  }
+}
+
+function loadStateFromLocalStorage(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      if(parsed && parsed.tabs && Array.isArray(parsed.tabs)){
+        appState = parsed;
+      }
+    }
+  }catch(e){
+    console.warn('ローカルストレージの読み込みに失敗しました:', e);
+  }
+}
+
+// 初期データのロード
+loadStateFromLocalStorage();
 
 // 年月日の初期設定
 const now = new Date();
@@ -222,7 +259,8 @@ function fillDaysForSelect(selectEl, selectedVal){
   else selectEl.value = '1';
 }
 
-function timeOptionsForSelect(selectedVal='09:00'){
+// 1時間刻み（00:00から28:00まで）
+function timeOptionsForSelect(selectedVal='12:00'){
   let s = '';
   for(let h=0; h<=28; h++){
     const displayH = h < 24 ? pad(h) : `翌${pad(h-24)}`;
@@ -234,13 +272,10 @@ function timeOptionsForSelect(selectedVal='09:00'){
 
 function updateEventFormOptions(){
   fillDaysForSelect($('targetDay'), $('targetDay').value);
-  
-  const oldStart = $('startTime').value || '09:00';
-  const oldEnd = $('endTime').value || '18:00';
-  
+  const oldStart = $('startTime').value || '12:00';
+  const oldEnd = $('endTime').value || '24:00';
   $('startTime').innerHTML = timeOptionsForSelect(oldStart);
   $('endTime').innerHTML = timeOptionsForSelect(oldEnd);
-  
   updateEventSummary();
 }
 
@@ -251,10 +286,10 @@ function updateEventSummary(){
   $('eventSummary').innerHTML = `イベント期間：<strong>${d}日/${st}-${et}</strong>`;
 }
 
-// 変更時に自動保存 & 自動再描画
 function triggerAutoUpdate(){
-  saveCurrentTab();
+  saveCurrentTabState();
   generateMatrixTable();
+  saveStateToLocalStorage();
 }
 
 $('year').onchange = () => { updateEventFormOptions(); triggerAutoUpdate(); };
@@ -266,150 +301,265 @@ $('endTime').onchange = () => { updateEventSummary(); triggerAutoUpdate(); };
 $('toggleYM').onclick = () => {
   $('eventYM').classList.toggle('hidden');
   $('toggleYM').textContent = $('eventYM').classList.contains('hidden') ? '年・月を変更' : '年・月を閉じる';
+  saveCurrentTabState();
+  saveStateToLocalStorage();
 };
 
-// ==================== 並走者 (Runners) 管理 ====================
-function addRunnerRow(data={}){
-  const tr = document.createElement('tr');
-  const slots = (data.slots && data.slots.length) ? data.slots : [{start:'09:00', end:'12:00'}];
 
-  tr.innerHTML = `
-    <td><input class="runner-name" placeholder="並走者名" value="${data.name||''}"></td>
-    <td><input class="runner-total" type="number" step="any" placeholder="総合力" value="${data.total??''}"></td>
-    <td>
-      <div class="time-slot-list runner-slots"></div>
-      <button type="button" class="add-time-slot add-runner-slot">＋ プレイ時間を追加</button>
-    </td>
-    <td><button type="button" class="danger remove-runner">削除</button></td>
-  `;
-
-  const list = tr.querySelector('.runner-slots');
-
-  function addSlotRow(slotData={}){
-    const row = document.createElement('div');
-    row.className = 'time-slot-row';
-    row.innerHTML = `
-      <select class="r-start">${timeOptionsForSelect(slotData.start||'09:00')}</select>
-      <span>～</span>
-      <select class="r-end">${timeOptionsForSelect(slotData.end||'12:00')}</select>
-      <button type="button" class="danger remove-slot" style="padding:4px 7px;">×</button>
-    `;
-    row.querySelector('.remove-slot').onclick = () => {
-      if(list.children.length > 1) row.remove();
-      triggerAutoUpdate();
-    };
-    list.appendChild(row);
-  }
-
-  slots.forEach(addSlotRow);
-
-  tr.querySelector('.add-runner-slot').onclick = (e) => {
-    e.preventDefault();
-    addSlotRow();
-    triggerAutoUpdate();
-  };
-
-  tr.querySelector('.remove-runner').onclick = (e) => {
-    e.preventDefault();
-    tr.remove();
-    triggerAutoUpdate();
-  };
-
-  for(const c of tr.querySelectorAll('input, select')) {
-    c.oninput = () => triggerAutoUpdate();
-    c.onchange = () => triggerAutoUpdate();
-  }
-
-  $('runnerBody').appendChild(tr);
-  triggerAutoUpdate();
+// ==================== タブ・データ管理 ====================
+function getActiveTab(){
+  return appState.tabs.find(t => t.id === appState.activeTabId) || appState.tabs[0];
 }
 
-$('addRunner').onclick = () => { addRunnerRow(); };
+function renderRunners(){
+  const tbody = $('runnerBody');
+  tbody.innerHTML = '';
+  const tab = getActiveTab();
+  if(!tab.runnerSchedules) tab.runnerSchedules = {};
+
+  appState.globalRunners.forEach((runner, index) => {
+    const tr = document.createElement('tr');
+    tr.dataset.id = runner.id;
+
+    tr.innerHTML = `
+      <td><input class="runner-name" placeholder="並走者名" value="${escapeHtml(runner.name||'')}"></td>
+      <td><input class="runner-total" type="number" step="any" placeholder="総合力" value="${runner.total??''}"></td>
+      <td>
+        <div class="time-slot-list runner-slots"></div>
+        <button type="button" class="add-time-slot add-runner-slot">＋ 時間を追加</button>
+      </td>
+      <td><button type="button" class="danger remove-runner">削除</button></td>
+    `;
+
+    const list = tr.querySelector('.runner-slots');
+
+    function addSlotRow(slotData={}){
+      const row = document.createElement('div');
+      row.className = 'time-slot-row';
+      row.innerHTML = `
+        <select class="r-start">${timeOptionsForSelect(slotData.start||'12:00')}</select>
+        <span>～</span>
+        <select class="r-end">${timeOptionsForSelect(slotData.end||'24:00')}</select>
+        <button type="button" class="danger remove-slot" style="padding:4px 7px;">×</button>
+      `;
+      row.querySelector('.remove-slot').onclick = () => {
+        if(list.children.length > 1) row.remove();
+        syncRunnersFromDOM();
+        triggerAutoUpdate();
+      };
+      row.querySelectorAll('select').forEach(sel => {
+        sel.onchange = () => { syncRunnersFromDOM(); triggerAutoUpdate(); };
+      });
+      list.appendChild(row);
+    }
+
+    const slots = (tab.runnerSchedules[runner.id] && tab.runnerSchedules[runner.id].length > 0) 
+      ? tab.runnerSchedules[runner.id] 
+      : [{start:'12:00', end:'24:00'}];
+    slots.forEach(addSlotRow);
+
+    tr.querySelector('.add-runner-slot').onclick = (e) => {
+      e.preventDefault();
+      addSlotRow({start:'12:00', end:'24:00'});
+      syncRunnersFromDOM();
+      triggerAutoUpdate();
+    };
+
+    tr.querySelector('.remove-runner').onclick = (e) => {
+      e.preventDefault();
+      delete tab.runnerSchedules[runner.id];
+      appState.globalRunners.splice(index, 1);
+      renderRunners();
+      triggerAutoUpdate();
+    };
+
+    tr.querySelectorAll('input').forEach(input => {
+      input.oninput = () => { syncRunnersFromDOM(); triggerAutoUpdate(); };
+    });
+
+    tbody.appendChild(tr);
+  });
+}
+
+function syncRunnersFromDOM(){
+  const rows = [...$('runnerBody').querySelectorAll('tr')];
+  const tab = getActiveTab();
+  if(!tab.runnerSchedules) tab.runnerSchedules = {};
+
+  appState.globalRunners = rows.map((tr, i) => {
+    let existingId = tr.dataset.id;
+    if(!existingId){
+      existingId = 'r_' + Date.now() + '_' + i;
+      tr.dataset.id = existingId;
+    }
+    const name = tr.querySelector('.runner-name').value;
+    const total = tr.querySelector('.runner-total').value;
+    const slots = [...tr.querySelectorAll('.time-slot-row')].map(row => ({
+      start: row.querySelector('.r-start').value,
+      end: row.querySelector('.r-end').value
+    }));
+    tab.runnerSchedules[existingId] = slots;
+    return { id: existingId, name, total };
+  });
+}
+
+$('addRunner').onclick = () => {
+  const newId = 'r_' + Date.now();
+  appState.globalRunners.push({
+    id: newId,
+    name: '',
+    total: ''
+  });
+  const tab = getActiveTab();
+  if(!tab.runnerSchedules) tab.runnerSchedules = {};
+  tab.runnerSchedules[newId] = [{start:'12:00', end:'24:00'}];
+  renderRunners();
+  triggerAutoUpdate();
+};
 
 
-// ==================== 支援者 (Supporters) 管理 ====================
-function addSupporterRow(data={}){
-  const tr = document.createElement('tr');
-  const slots = (data.slots && data.slots.length) ? data.slots : [{start:'09:00', end:'18:00'}];
+function renderSupporters(){
+  const tbody = $('supporterBody');
+  tbody.innerHTML = '';
+  const tab = getActiveTab();
+  if(!tab.supporterSchedules) tab.supporterSchedules = {};
 
-  tr.innerHTML = `
-    <td><input class="person" placeholder="支援者名" value="${data.name||''}"></td>
-    <td><input class="small first" type="number" step="any" value="${data.first??''}"></td>
-    <td><input class="small internal" type="number" step="any" value="${data.internal??''}"></td>
-    <td><input class="small total" type="number" step="any" value="${data.total??''}"></td>
-    <td><input class="small direct-effective" type="number" step="any" placeholder="直接入力" value="${data.directEffective??''}"></td>
-    <td>
-      <div class="time-slot-list supporter-slots"></div>
-      <button type="button" class="add-time-slot add-supporter-slot">＋ 時間を追加</button>
-    </td>
-    <td>
-      <button type="button" class="secondary details-toggle">詳細設定</button>
-      <div class="details-panel hidden" style="margin-top:6px;padding:8px;border:1px solid var(--border);border-radius:6px;background:#fafbfc;min-width:140px;">
-        <div style="margin-bottom:6px;font-size:13px;">
-          <div>最大シフト時間</div>
-          <input class="small max-hours" type="number" min="0" step="1" placeholder="無制限" value="${data.maxHours??''}" style="font-size:13px;padding:5px 6px;margin-top:2px;">時間
+  appState.globalSupporters.forEach((sup, index) => {
+    const tr = document.createElement('tr');
+    tr.dataset.id = sup.id;
+
+    const supData = tab.supporterSchedules[sup.id] || { slots: [{start:'12:00', end:'24:00'}], maxHours: '', waitOk: true };
+
+    tr.innerHTML = `
+      <td><input class="person" placeholder="支援者名" value="${escapeHtml(sup.name||'')}"></td>
+      <td><input class="small first" type="number" step="any" value="${sup.first??''}"></td>
+      <td><input class="small internal" type="number" step="any" value="${sup.internal??''}"></td>
+      <td><input class="small total" type="number" step="any" value="${sup.total??''}"></td>
+      <td><input class="small direct-effective" type="number" step="any" placeholder="直接" value="${sup.directEffective??''}"></td>
+      <td>
+        <div class="time-slot-list supporter-slots"></div>
+        <button type="button" class="add-time-slot add-supporter-slot">＋ 時間を追加</button>
+      </td>
+      <td>
+        <button type="button" class="secondary details-toggle">詳細設定</button>
+        <div class="details-panel hidden" style="margin-top:6px;padding:8px;border:1px solid var(--border);border-radius:6px;background:#fafbfc;min-width:140px;">
+          <div style="margin-bottom:6px;font-size:13px;">
+            <div>最大シフト時間</div>
+            <input class="small max-hours" type="number" min="0" step="1" placeholder="無制限" value="${supData.maxHours??''}" style="font-size:13px;padding:5px 6px;margin-top:2px;">時間
+          </div>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer;margin:0;">
+            <input class="no-wait-check" type="checkbox" ${supData.waitOk===false?'checked':''} style="width:14px;height:14px;cursor:pointer;">
+            <span>待機×</span>
+          </label>
         </div>
-        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer;margin:0;">
-          <input class="no-wait-check" type="checkbox" ${data.waitOk===false?'checked':''} style="width:14px;height:14px;cursor:pointer;">
-          <span>待機×</span>
-        </label>
-      </div>
-    </td>
-    <td><button type="button" class="danger remove-supporter">削除</button></td>
-  `;
-
-  const list = tr.querySelector('.supporter-slots');
-
-  function addSlotRow(slotData={}){
-    const row = document.createElement('div');
-    row.className = 'time-slot-row';
-    row.innerHTML = `
-      <select class="s-start">${timeOptionsForSelect(slotData.start||'09:00')}</select>
-      <span>～</span>
-      <select class="s-end">${timeOptionsForSelect(slotData.end||'18:00')}</select>
-      <button type="button" class="danger remove-slot" style="padding:4px 7px;">×</button>
+      </td>
+      <td><button type="button" class="danger remove-supporter">削除</button></td>
     `;
-    row.querySelector('.remove-slot').onclick = () => {
-      if(list.children.length > 1) row.remove();
+
+    const list = tr.querySelector('.supporter-slots');
+
+    function addSlotRow(slotData={}){
+      const row = document.createElement('div');
+      row.className = 'time-slot-row';
+      row.innerHTML = `
+        <select class="s-start">${timeOptionsForSelect(slotData.start||'12:00')}</select>
+        <span>～</span>
+        <select class="s-end">${timeOptionsForSelect(slotData.end||'24:00')}</select>
+        <button type="button" class="danger remove-slot" style="padding:4px 7px;">×</button>
+      `;
+      row.querySelector('.remove-slot').onclick = () => {
+        if(list.children.length > 1) row.remove();
+        syncSupportersFromDOM();
+        triggerAutoUpdate();
+      };
+      row.querySelectorAll('select').forEach(sel => {
+        sel.onchange = () => { syncSupportersFromDOM(); triggerAutoUpdate(); };
+      });
+      list.appendChild(row);
+    }
+
+    const slots = (supData.slots && supData.slots.length > 0) ? supData.slots : [{start:'12:00', end:'24:00'}];
+    slots.forEach(addSlotRow);
+
+    tr.querySelector('.add-supporter-slot').onclick = (e) => {
+      e.preventDefault();
+      addSlotRow({start:'12:00', end:'24:00'});
+      syncSupportersFromDOM();
       triggerAutoUpdate();
     };
-    list.appendChild(row);
-  }
 
-  slots.forEach(addSlotRow);
+    tr.querySelector('.remove-supporter').onclick = (e) => {
+      e.preventDefault();
+      delete tab.supporterSchedules[sup.id];
+      appState.globalSupporters.splice(index, 1);
+      renderSupporters();
+      triggerAutoUpdate();
+    };
 
-  tr.querySelector('.add-supporter-slot').onclick = (e) => {
-    e.preventDefault();
-    addSlotRow();
-    triggerAutoUpdate();
-  };
+    tr.querySelector('.details-toggle').onclick = () => {
+      const panel = tr.querySelector('.details-panel');
+      panel.classList.toggle('hidden');
+    };
 
-  tr.querySelector('.remove-supporter').onclick = (e) => {
-    e.preventDefault();
-    tr.remove();
-    triggerAutoUpdate();
-  };
+    tr.querySelectorAll('input, select').forEach(el => {
+      el.oninput = () => { syncSupportersFromDOM(); triggerAutoUpdate(); };
+      el.onchange = () => { syncSupportersFromDOM(); triggerAutoUpdate(); };
+    });
 
-  tr.querySelector('.details-toggle').onclick = () => {
-    const panel = tr.querySelector('.details-panel');
-    panel.classList.toggle('hidden');
-  };
-
-  for(const c of tr.querySelectorAll('input, select')) {
-    c.oninput = () => triggerAutoUpdate();
-    c.onchange = () => triggerAutoUpdate();
-  }
-
-  $('supporterBody').appendChild(tr);
-  triggerAutoUpdate();
+    tbody.appendChild(tr);
+  });
 }
 
-$('addSupporter').onclick = () => { addSupporterRow(); };
+function syncSupportersFromDOM(){
+  const rows = [...$('supporterBody').querySelectorAll('tr')];
+  const tab = getActiveTab();
+  if(!tab.supporterSchedules) tab.supporterSchedules = {};
 
-function getSupporterEffective(tr){
-  const first = parseFloat(tr.querySelector('.first').value);
-  const internal = parseFloat(tr.querySelector('.internal').value);
-  const direct = parseFloat(tr.querySelector('.direct-effective').value);
+  appState.globalSupporters = rows.map((tr, i) => {
+    let existingId = tr.dataset.id;
+    if(!existingId){
+      existingId = 's_' + Date.now() + '_' + i;
+      tr.dataset.id = existingId;
+    }
+    const name = tr.querySelector('.person').value;
+    const first = tr.querySelector('.first').value;
+    const internal = tr.querySelector('.internal').value;
+    const total = tr.querySelector('.total').value;
+    const directEffective = tr.querySelector('.direct-effective').value;
+    const maxHours = tr.querySelector('.max-hours').value;
+    const waitOk = !tr.querySelector('.no-wait-check').checked;
+    const slots = [...tr.querySelectorAll('.time-slot-row')].map(row => ({
+      start: row.querySelector('.s-start').value,
+      end: row.querySelector('.s-end').value
+    }));
+
+    tab.supporterSchedules[existingId] = { slots, maxHours, waitOk };
+
+    return { id: existingId, name, first, internal, total, directEffective };
+  });
+}
+
+$('addSupporter').onclick = () => {
+  const newId = 's_' + Date.now();
+  appState.globalSupporters.push({
+    id: newId,
+    name: '',
+    first: '',
+    internal: '',
+    total: '',
+    directEffective: ''
+  });
+  const tab = getActiveTab();
+  if(!tab.supporterSchedules) tab.supporterSchedules = {};
+  tab.supporterSchedules[newId] = { slots: [{start:'12:00', end:'24:00'}], maxHours: '', waitOk: true };
+  renderSupporters();
+  triggerAutoUpdate();
+};
+
+function getSupporterEffective(sup){
+  const first = parseFloat(sup.first);
+  const internal = parseFloat(sup.internal);
+  const direct = parseFloat(sup.directEffective);
 
   if(Number.isFinite(first) && Number.isFinite(internal)){
     return Math.floor(((internal - first) / 5) + first);
@@ -421,75 +571,71 @@ function getSupporterEffective(tr){
 }
 
 $('sortByEffective').onclick = () => {
-  const rows = [...$('supporterBody').querySelectorAll('tr')];
-  rows.sort((a,b)=>{
+  appState.globalSupporters.sort((a,b)=>{
     const ea = getSupporterEffective(a);
     const eb = getSupporterEffective(b);
     const va = Number.isFinite(ea) ? ea : -Infinity;
     const vb = Number.isFinite(eb) ? eb : -Infinity;
     if(vb !== va) return vb - va;
 
-    const ta = parseFloat(a.querySelector('.total')?.value);
-    const tb = parseFloat(b.querySelector('.total')?.value);
+    const ta = parseFloat(a.total);
+    const tb = parseFloat(b.total);
     return (Number.isFinite(tb) ? tb : -Infinity) - (Number.isFinite(ta) ? ta : -Infinity);
   });
-  rows.forEach(row => $('supporterBody').appendChild(row));
+  renderSupporters();
   triggerAutoUpdate();
 };
 
 
 // ==================== マトリックス表自動作成機構 ====================
-function parseHourValue(timeStr){
-  const [h] = timeStr.split(':').map(Number);
-  return h;
+function parseMinutes(timeStr){
+  const [h, m] = timeStr.split(':').map(Number);
+  return h * 60 + m;
 }
 
 function generateMatrixTable(){
-  const startH = parseHourValue($('startTime').value);
-  const endH = parseHourValue($('endTime').value);
+  const startMin = parseMinutes($('startTime').value);
+  const endMin = parseMinutes($('endTime').value);
 
-  if(endH <= startH){
+  if(endMin <= startMin){
     $('result').innerHTML = '<div class="status warn">終了時刻は開始時刻より後に設定してください。</div>';
     return;
   }
 
   const timeSlots = [];
-  for(let h = startH; h < endH; h++){
-    timeSlots.push({ start: h, end: h+1 });
+  for(let m = startMin; m < endMin; m += 60){
+    timeSlots.push({ startMin: m, endMin: m + 60 });
   }
 
-  // 1. 並走者のデータ収集
-  const runners = [...$('runnerBody').querySelectorAll('tr')].map((tr, i) => {
-    const name = tr.querySelector('.runner-name').value.trim() || `並走者${i+1}`;
-    const total = tr.querySelector('.runner-total').value;
-    const slots = [...tr.querySelectorAll('.time-slot-row')].map(row => ({
-      start: parseHourValue(row.querySelector('.r-start').value),
-      end: parseHourValue(row.querySelector('.r-end').value)
-    }));
-    return { name, total, slots };
-  });
+  const tab = getActiveTab();
+  const runnerSch = tab.runnerSchedules || {};
+  const supporterSch = tab.supporterSchedules || {};
 
-  // 2. 支援者のデータ収集と実効値降順ソート
-  let supporters = [...$('supporterBody').querySelectorAll('tr')].map((tr, i) => {
-    const name = tr.querySelector('.person').value.trim() || `支援者${i+1}`;
-    const effective = getSupporterEffective(tr);
-    const maxHours = tr.querySelector('.max-hours')?.value;
-    const waitOk = !(tr.querySelector('.no-wait-check')?.checked);
-    const slots = [...tr.querySelectorAll('.time-slot-row')].map(row => ({
-      start: parseHourValue(row.querySelector('.s-start').value),
-      end: parseHourValue(row.querySelector('.s-end').value)
-    }));
-    
-    // 詳細設定があるか判定
+  const runners = appState.globalRunners.map((r, i) => ({
+    name: r.name.trim() || `並走者${i+1}`,
+    slots: (runnerSch[r.id] || []).map(s => ({ start: parseMinutes(s.start), end: parseMinutes(s.end) }))
+  }));
+
+  let supporters = appState.globalSupporters.map((s, i) => {
+    const effective = getSupporterEffective(s);
+    const supExtra = supporterSch[s.id] || {};
+    const maxHours = supExtra.maxHours;
+    const waitOk = supExtra.waitOk;
     const hasMax = maxHours !== '' && maxHours !== undefined && !isNaN(Number(maxHours));
     const hasWait = waitOk === false;
     const hasDetails = hasMax || hasWait;
-    
+
     let detailTexts = [];
     if(hasMax) detailTexts.push(`最大シフト時間 ${maxHours}時間`);
     if(hasWait) detailTexts.push(`待機NG`);
 
-    return { name, effective, maxHours, waitOk, hasDetails, detailTexts, slots };
+    return {
+      name: s.name.trim() || `支援者${i+1}`,
+      effective,
+      hasDetails,
+      detailTexts,
+      slots: (supExtra.slots || []).map(sl => ({ start: parseMinutes(sl.start), end: parseMinutes(sl.end) }))
+    };
   });
 
   supporters.sort((a, b) => {
@@ -503,25 +649,26 @@ function generateMatrixTable(){
     return;
   }
 
-  // 各時間帯ごとの合計人数集計用配列
   const slotCounts = timeSlots.map(() => 0);
 
   let html = '<div class="matrix-wrap"><table class="shift-matrix"><thead><tr><th>名前 / 時間</th>';
   
   for(const slot of timeSlots){
-    const sh = pad(slot.start % 24);
-    const eh = pad(slot.end % 24);
-    html += `<th>${sh}~${eh}</th>`;
+    const sh = pad(Math.floor(slot.startMin / 60) % 24);
+    const sm = pad(slot.startMin % 60);
+    const eh = pad(Math.floor(slot.endMin / 60) % 24);
+    const em = pad(slot.endMin % 60);
+    html += `<th>${sh}:${sm}~${eh}:${em}</th>`;
   }
   html += '</tr></thead><tbody>';
 
-  // --- 並走者セクション ---
+  // 並走者セクション
   if(runners.length > 0){
     html += `<tr><td colspan="${timeSlots.length + 1}" class="category-header">【並走者】</td></tr>`;
     for(const r of runners){
       html += `<tr><td><strong>${escapeHtml(r.name)}</strong></td>`;
       timeSlots.forEach((slot, idx) => {
-        const isPlaying = r.slots.some(s => s.start <= slot.start && s.end >= slot.end);
+        const isPlaying = r.slots.some(s => s.start <= slot.startMin && s.end >= slot.endMin);
         if(isPlaying){
           slotCounts[idx]++;
           html += `<td class="matrix-runner">プレイ中</td>`;
@@ -533,7 +680,7 @@ function generateMatrixTable(){
     }
   }
 
-  // --- 支援者セクション ---
+  // 支援者セクション
   const noteItems = [];
   if(supporters.length > 0){
     html += `<tr><td colspan="${timeSlots.length + 1}" class="category-header">【支援者（実効値順）】</td></tr>`;
@@ -544,7 +691,7 @@ function generateMatrixTable(){
       html += `<td><strong>${escapeHtml(s.name)}</strong>${mark}<br><span style="font-size:11px;color:#666;">(${effText})</span></td>`;
       
       timeSlots.forEach((slot, idx) => {
-        const isAvailable = s.slots.some(sl => sl.start <= slot.start && sl.end >= slot.end);
+        const isAvailable = s.slots.some(sl => sl.start <= slot.startMin && sl.end >= slot.endMin);
         if(isAvailable){
           slotCounts[idx]++;
           html += `<td class="matrix-supporter">可能</td>`;
@@ -560,7 +707,7 @@ function generateMatrixTable(){
     }
   }
 
-  // --- 合計人数行（時間部分に色分け適用） ---
+  // 合計人数行（カラーハイライト付き）
   html += `<tr><td><strong>合計人数</strong></td>`;
   slotCounts.forEach(count => {
     let countClass = '';
@@ -579,7 +726,6 @@ function generateMatrixTable(){
 
   html += '</tbody></table></div>';
 
-  // ※印の注記セクション
   if(noteItems.length > 0){
     html += `
       <div class="notes-section">
@@ -595,11 +741,12 @@ function generateMatrixTable(){
 }
 
 function escapeHtml(str){
-  return str.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  if(!str) return '';
+  return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
 
-// ==================== マルチタブ機能 & LocalStorage保存 ====================
+// ==================== マルチタブ管理 ====================
 function renderTabs(){
   const tabList = $('tabList');
   tabList.innerHTML = '';
@@ -614,7 +761,7 @@ function renderTabs(){
     titleInput.value = tab.title;
     titleInput.oninput = (e) => {
       tab.title = e.target.value;
-      saveAllTabsToStorage();
+      saveStateToLocalStorage();
     };
     titleInput.onclick = (e) => e.stopPropagation();
 
@@ -634,10 +781,11 @@ function renderTabs(){
 
     tabEl.onclick = () => {
       if(appState.activeTabId !== tab.id){
-        saveCurrentTab();
+        saveCurrentTabState();
         appState.activeTabId = tab.id;
-        loadCurrentTab();
+        loadCurrentTabState();
         renderTabs();
+        saveStateToLocalStorage();
       }
     };
 
@@ -646,14 +794,20 @@ function renderTabs(){
 }
 
 function addTab(){
-  saveCurrentTab();
+  saveCurrentTabState();
   const newId = 'tab_' + Date.now();
   const newTitle = `${appState.tabs.length + 1}日目`;
-  appState.tabs.push({ id: newId, title: newTitle, data: null });
+  appState.tabs.push({
+    id: newId,
+    title: newTitle,
+    event: { targetDay: String(appState.tabs.length + 1), startTime: '12:00', endTime: '24:00', year: $('year').value, month: $('month').value, ymOpen: false },
+    runnerSchedules: {},
+    supporterSchedules: {}
+  });
   appState.activeTabId = newId;
-  loadCurrentTab();
+  loadCurrentTabState();
   renderTabs();
-  saveAllTabsToStorage();
+  saveStateToLocalStorage();
 }
 
 $('addTabBtn').onclick = addTab;
@@ -667,129 +821,65 @@ function deleteTab(id){
   if(appState.activeTabId === id){
     appState.activeTabId = appState.tabs[Math.max(0, idx - 1)].id;
   }
-  loadCurrentTab();
+  loadCurrentTabState();
   renderTabs();
-  saveAllTabsToStorage();
+  saveStateToLocalStorage();
 }
 
-function getActiveTab(){
-  return appState.tabs.find(t => t.id === appState.activeTabId) || appState.tabs[0];
-}
-
-function saveCurrentTab(){
+function saveCurrentTabState(){
   const tab = getActiveTab();
-  tab.data = {
-    event: {
-      year: $('year').value,
-      month: $('month').value,
-      targetDay: $('targetDay').value,
-      startTime: $('startTime').value,
-      endTime: $('endTime').value,
-      ymOpen: !$('eventYM').classList.contains('hidden')
-    },
-    runners: [...$('runnerBody').querySelectorAll('tr')].map(tr => ({
-      name: tr.querySelector('.runner-name').value,
-      total: tr.querySelector('.runner-total').value,
-      slots: [...tr.querySelectorAll('.time-slot-row')].map(row => ({
-        start: row.querySelector('.r-start').value,
-        end: row.querySelector('.r-end').value
-      }))
-    })),
-    supporters: [...$('supporterBody').querySelectorAll('tr')].map(tr => ({
-      name: tr.querySelector('.person').value,
-      first: tr.querySelector('.first').value,
-      internal: tr.querySelector('.internal').value,
-      total: tr.querySelector('.total').value,
-      directEffective: tr.querySelector('.direct-effective').value,
-      maxHours: tr.querySelector('.max-hours')?.value ?? '',
-      waitOk: !(tr.querySelector('.no-wait-check')?.checked),
-      slots: [...tr.querySelectorAll('.time-slot-row')].map(row => ({
-        start: row.querySelector('.s-start').value,
-        end: row.querySelector('.s-end').value
-      }))
-    }))
+  tab.event = {
+    year: $('year').value,
+    month: $('month').value,
+    targetDay: $('targetDay').value,
+    startTime: $('startTime').value,
+    endTime: $('endTime').value,
+    ymOpen: !$('eventYM').classList.contains('hidden')
   };
-  saveAllTabsToStorage();
+  syncRunnersFromDOM();
+  syncSupportersFromDOM();
 }
 
-function loadCurrentTab(){
+function loadCurrentTabState(){
   const tab = getActiveTab();
-  const data = tab.data;
+  const ev = tab.event || {};
 
-  $('runnerBody').innerHTML = '';
-  $('supporterBody').innerHTML = '';
-  $('result').innerHTML = '';
+  if(ev.year) $('year').value = ev.year;
+  if(ev.month) $('month').value = ev.month;
+  updateEventFormOptions();
 
-  if(data && data.event){
-    if(data.event.year) $('year').value = data.event.year;
-    if(data.event.month) $('month').value = data.event.month;
-    updateEventFormOptions();
-    if(data.event.targetDay) $('targetDay').value = data.event.targetDay;
-    if(data.event.startTime) $('startTime').value = data.event.startTime;
-    if(data.event.endTime) $('endTime').value = data.event.endTime;
+  if(ev.targetDay) $('targetDay').value = ev.targetDay;
+  if(ev.startTime) $('startTime').value = ev.startTime;
+  if(ev.endTime) $('endTime').value = ev.endTime;
 
-    if(data.event.ymOpen){
-      $('eventYM').classList.remove('hidden');
-      $('toggleYM').textContent = '年・月を閉じる';
-    } else {
-      $('eventYM').classList.add('hidden');
-      $('toggleYM').textContent = '年・月を変更';
-    }
+  if(ev.ymOpen){
+    $('eventYM').classList.remove('hidden');
+    $('toggleYM').textContent = '年・月を閉じる';
   } else {
-    updateEventFormOptions();
+    $('eventYM').classList.add('hidden');
+    $('toggleYM').textContent = '年・月を変更';
   }
 
   updateEventSummary();
-
-  if(data && data.runners && data.runners.length > 0){
-    data.runners.forEach(r => addRunnerRow(r));
-  } else {
-    addRunnerRow();
-  }
-
-  if(data && data.supporters && data.supporters.length > 0){
-    data.supporters.forEach(s => addSupporterRow(s));
-  } else {
-    addSupporterRow();
-    addSupporterRow();
-  }
-
+  renderRunners();
+  renderSupporters();
   generateMatrixTable();
-}
-
-function saveAllTabsToStorage(){
-  try{
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
-    const status = $('saveStatus');
-    if(status){
-      status.textContent = '自動保存済み';
-      clearTimeout(window.__saveTimer);
-      window.__saveTimer = setTimeout(() => { status.textContent = ''; }, 1500);
-    }
-  }catch(e){
-    console.warn('ストレージ保存エラー:', e);
-  }
-}
-
-function loadAllTabsFromStorage(){
-  try{
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if(!raw) return false;
-    const parsed = JSON.parse(raw);
-    if(parsed && Array.isArray(parsed.tabs) && parsed.tabs.length > 0){
-      appState = parsed;
-      return true;
-    }
-  }catch(e){
-    console.warn('ストレージ読み込みエラー:', e);
-  }
-  return false;
 }
 
 $('clearTabData').onclick = () => {
   const tab = getActiveTab();
-  tab.data = null;
-  loadCurrentTab();
+  tab.event = { targetDay: '1', startTime: '12:00', endTime: '24:00', year: $('year').value, month: $('month').value, ymOpen: false };
+  tab.runnerSchedules = {};
+  tab.supporterSchedules = {};
+  loadCurrentTabState();
+  saveStateToLocalStorage();
+};
+
+$('clearStorageBtn').onclick = () => {
+  if(confirm('ブラウザに保存されているすべてのデータをリセットしますか？')){
+    localStorage.removeItem(STORAGE_KEY);
+    location.reload();
+  }
 };
 
 
@@ -857,17 +947,8 @@ if($('discordShare')){
 
 
 // 初期起動処理
-if(!loadAllTabsFromStorage()){
-  appState = {
-    activeTabId: 'tab_1',
-    tabs: [
-      { id: 'tab_1', title: '1日目', data: null }
-    ]
-  };
-}
-
 renderTabs();
-loadCurrentTab();
+loadCurrentTabState();
 
 </script>
 </body>
