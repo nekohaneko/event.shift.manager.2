@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>1日シフト管理ツール</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root { --border:#d9dde5; --bg:#f6f7f9; --card:#fff; --text:#222; --sub:#666; --accent:#4f6bed; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,"Segoe UI","Noto Sans JP",sans-serif; color:var(--text); background:var(--bg); }
+  main { max-width:1200px; margin:24px auto; padding:0 16px 48px; }
+  
+  /* Tabs UI */
+  .tab-bar-container { display:flex; align-items:center; background:#e4e7ed; padding:6px 6px 0; border-radius:12px 12px 0 0; border:1px solid var(--border); overflow-x:auto; gap:4px; }
+  .tab-item { display:flex; align-items:center; gap:6px; background:#d2d6df; padding:8px 14px; border-radius:8px 8px 0 0; font-size:14px; font-weight:600; cursor:pointer; user-select:none; white-space:nowrap; border:1px solid transparent; }
+  .tab-item.active { background:var(--card); border-color:var(--border); border-bottom-color:var(--card); color:var(--accent); }
+  .tab-item input { border:1px solid var(--border); border-radius:4px; padding:2px 4px; font-size:14px; font:inherit; background:#fff; width:110px; }
+  .tab-close { border:none; background:transparent; font-size:14px; cursor:pointer; color:#777; padding:0 2px; border-radius:4px; }
+  .tab-close:hover { background:#ffdddd; color:#d00; }
+  .tab-add-btn { background:transparent; border:none; font-weight:bold; font-size:15px; padding:6px 12px; cursor:pointer; color:#444; border-radius:8px; }
+  .tab-add-btn:hover { background:#d2d6df; }
+
+  .tab-content-container { background:var(--card); border:1px solid var(--border); border-top:none; border-radius:0 0 14px 14px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,.03); }
+
+  .card { background:#fafbfc; border:1px solid var(--border); border-radius:10px; padding:18px; margin-bottom:18px; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:end; }
+  label { display:block; font-size:13px; color:var(--sub); margin-bottom:5px; }
+  select,input,button { font:inherit; }
+  select,input { border:1px solid #cfd4dd; border-radius:8px; padding:9px 10px; background:#fff; }
+  button { border:0; border-radius:8px; padding:9px 13px; cursor:pointer; background:var(--accent); color:white; }
+  button.secondary { background:#eef0f5; color:#333; }
+  button.danger { background:#e85b5b; }
+  .hidden { display:none; }
+  .event-summary { margin-top:12px; padding:10px 12px; background:#f2f4ff; border-radius:8px; font-size:14px; font-weight:600; color:#335; }
+  .hint { color:var(--sub); font-size:13px; }
+  .table-wrap { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; min-width:780px; }
+  th,td { border-bottom:1px solid var(--border); padding:9px 7px; text-align:left; vertical-align:middle; }
+  th { font-size:13px; color:var(--sub); background:#f4f5f8; }
+  td input,td select { width:100%; min-width:80px; }
+  .small { width:90px !important; min-width:70px !important; }
+  .person { min-width:130px !important; }
+  
+  .time-slot-list { display:flex; flex-direction:column; gap:6px; min-width:230px; }
+  .time-slot-row { display:flex; gap:5px; align-items:center; }
+  .time-slot-row select { width:105px; min-width:95px; }
+  .add-time-slot { background:#eef0f5; color:#333; padding:5px 9px; font-size:13px; }
+  
+  .controls { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; align-items:center; }
+  .status { margin-top:12px; padding:11px 13px; border-radius:8px; background:#f7f7f7; }
+  .status.ok { background:#eef8f0; }
+  .status.warn { background:#fff5e7; }
+  
+  /* Matrix Timetable Table Styles */
+  .matrix-wrap { overflow:auto; margin-top:14px; }
+  .shift-matrix { border-collapse:collapse; min-width:max-content; width:100%; }
+  .shift-matrix th, .shift-matrix td { border:1px solid var(--border); padding:8px 10px; text-align:center; white-space:nowrap; font-size:13px; }
+  .shift-matrix th:first-child, .shift-matrix td:first-child { position:sticky; left:0; background:#fff; z-index:2; text-align:left; min-width:170px; }
+  .shift-matrix thead th { position:sticky; top:0; z-index:3; background:#f4f5f8; }
+  .matrix-runner { background:#e8f0fe; color:#174ea6; font-weight:600; }
+  .matrix-supporter { background:#e6f4ea; color:#137333; font-weight:600; }
+  .matrix-empty { background:#fff; color:#ccc; }
+  .category-header { background:#e4e7ed !important; font-weight:bold; color:#333; text-align:left !important; }
+  
+  .notes-section { margin-top:16px; padding:12px 16px; background:#fffbf0; border:1px solid #fce8b2; border-radius:8px; font-size:13px; color:#554; }
+  .notes-section h4 { margin:0 0 6px; font-size:14px; font-weight:600; color:#856404; }
+  .notes-section ul { margin:0; padding-left:20px; }
+</style>
+</head>
+<body>
+<main>
+  <h1 class="text-2xl font-bold mb-1">1日シフト管理ツール</h1>
+  <p class="lead">Excel風タブ切り替え対応、並走者と支援者のマトリクス表作成ツールです。</p>
+
+  <!-- Tabs Navigation Bar -->
+  <div class="tab-bar-container" id="tabBar">
+    <div id="tabList" style="display:flex; gap:4px; align-items:center; overflow-x:auto;"></div>
+    <button type="button" class="tab-add-btn" id="addTabBtn" title="タブを追加">＋ ページ追加</button>
+  </div>
+
+  <!-- Tab Content Area -->
+  <div class="tab-content-container">
+    
+    <!-- Section 1: Event Period -->
+    <section class="card">
+      <h2 class="text-lg font-semibold mb-3">1. イベント期間（d日/mm:00-mm:00形式）</h2>
+      <div class="row">
+        <div>
+          <label>日 (d日)</label>
+          <select id="targetDay" class="event-input"></select>
+        </div>
+        <div>
+          <label>開始時刻</label>
+          <select id="startTime" class="event-input"></select>
+        </div>
+        <div>
+          <label>終了時刻</label>
+          <select id="endTime" class="event-input"></select>
+        </div>
+      </div>
+      <div class="controls">
+        <button type="button" class="secondary" id="toggleYM">年・月を変更</button>
+      </div>
+      <div id="eventYM" class="row hidden" style="margin-top:12px;">
+        <div>
+          <label>年</label>
+          <select id="year" class="event-input"></select>
+        </div>
+        <div>
+          <label>月</label>
+          <select id="month" class="event-input"></select>
+        </div>
+      </div>
+      <div id="eventSummary" class="event-summary">イベント期間：-</div>
+    </section>
+
+    <!-- Section 2: Runners (並走者) -->
+    <section class="card">
+      <h2 class="text-lg font-semibold mb-1">2. 並走者</h2>
+      <p class="hint mb-3">名前、総合力、プレイ予定時間（00:00〜28:00のプルダウン）を入力します。総合力やプレイ予定が空欄でも進められます。</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:200px;">名前</th>
+              <th style="width:140px;">総合力</th>
+              <th>プレイ予定（時間のみ）</th>
+              <th style="width:70px;">操作</th>
+            </tr>
+          </thead>
+          <tbody id="runnerBody"></tbody>
+        </table>
+      </div>
+      <div class="controls">
+        <button type="button" id="addRunner">＋ 並走者を追加</button>
+      </div>
+    </section>
+
+    <!-- Section 3: Supporters (支援者) -->
+    <section class="card">
+      <h2 class="text-lg font-semibold mb-1">3. 支援者</h2>
+      <p class="hint mb-3">
+        名前・先頭値・内部値・総合力・実効値・シフト可能時間（00:00〜28:00）を入力。<br>
+        <span style="color:#b33; font-weight:600;">⚠ 先頭値・内部値から算出できる場合は算出値が優先されます。直接入力も可能です。WLの場合は33.6万以上の総合力を入力しないでください。</span>
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>名前</th><th>先頭値</th><th>内部値</th><th>総合力</th><th>実効値</th><th>シフト可能時間</th><th>詳細設定</th><th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="supporterBody"></tbody>
+        </table>
+      </div>
+      <div class="controls">
+        <button type="button" id="addSupporter">＋ 支援者を追加</button>
+        <button type="button" class="secondary" id="sortByEffective">実効値順に並べ替え</button>
+      </div>
+    </section>
+
+    <!-- Section 4: Timetable Generator (表を作成する機構) -->
+    <section class="card">
+      <h2 class="text-lg font-semibold mb-1">4. タイムテーブル作成</h2>
+      <p class="hint mb-3">並走者を一番上の段に配置し、その下に実効値が高い順（降順）の支援者を積んだマトリクス表を生成します。詳細設定がある場合は注記として下部に表示されます。</p>
+      <div class="controls">
+        <button type="button" id="makeTable">マトリックス表を作成</button>
+        <button type="button" class="secondary" id="discordShare">表をエクセル形式でコピー</button>
+        <button type="button" class="danger" id="clearTabData">現在のタブを初期化</button>
+        <span id="saveStatus" class="hint"></span>
+      </div>
+      <div id="result" style="margin-top:14px;"></div>
+    </section>
+
+  </div>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2,'0');
+
+const STORAGE_KEY = 'event_shift_manager_multitab_v4';
+
+// マルチタブの状態管理
+let appState = {
+  activeTabId: 'tab_1',
+  tabs: [
+    { id: 'tab_1', title: '1日目', data: null }
+  ]
+};
+
+// 年月日の初期設定
+const now = new Date();
+const currentYear = now.getFullYear();
+const currentMonth = now.getMonth()+1;
+
+for(let y=currentYear-2; y<=currentYear+2; y++){
+  $('year').insertAdjacentHTML('beforeend', `<option value="${y}">${y}年</option>`);
+}
+$('year').value = currentYear;
+
+for(let m=1; m<=12; m++){
+  $('month').insertAdjacentHTML('beforeend', `<option value="${m}">${m}月</option>`);
+}
+$('month').value = currentMonth;
+
+function fillDaysForSelect(selectEl, selectedVal){
+  const days = new Date(Number($('year').value), Number($('month').value), 0).getDate();
+  const old = selectedVal !== undefined ? selectedVal : selectEl.value;
+  selectEl.innerHTML = '';
+  for(let d=1; d<=days; d++){
+    selectEl.insertAdjacentHTML('beforeend', `<option value="${d}">${d}日</option>`);
+  }
+  if(old && Number(old)<=days) selectEl.value = old;
+  else selectEl.value = '1';
+}
+
+// 00:00から28:00までの時刻プルダウン生成
+function timeOptionsForSelect(selectedVal='09:00'){
+  let s = '';
+  for(let h=0; h<=28; h++){
+    const displayH = h < 24 ? pad(h) : `翌${pad(h-24)}`;
+    const v = `${pad(h)}:00`;
+    s += `<option value="${v}" ${v===selectedVal?'selected':''}>${displayH}:00</option>`;
+  }
+  return s;
+}
+
+function updateEventFormOptions(){
+  fillDaysForSelect($('targetDay'), $('targetDay').value);
+  
+  const oldStart = $('startTime').value || '09:00';
+  const oldEnd = $('endTime').value || '18:00';
+  
+  $('startTime').innerHTML = timeOptionsForSelect(oldStart);
+  $('endTime').innerHTML = timeOptionsForSelect(oldEnd);
+  
+  updateEventSummary();
+}
+
+function updateEventSummary(){
+  const d = $('targetDay').value || '1';
+  const st = $('startTime').value || '00:00';
+  const et = $('endTime').value || '28:00';
+  $('eventSummary').innerHTML = `イベント期間：<strong>${d}日/${st}-${et}</strong>`;
+}
+
+// イベント変更時のイベントリスナー
+$('year').onchange = () => { updateEventFormOptions(); saveCurrentTab(); };
+$('month').onchange = () => { updateEventFormOptions(); saveCurrentTab(); };
+$('targetDay').onchange = () => { updateEventSummary(); saveCurrentTab(); };
+$('startTime').onchange = () => { updateEventSummary(); saveCurrentTab(); };
+$('endTime').onchange = () => { updateEventSummary(); saveCurrentTab(); };
+
+$('toggleYM').onclick = () => {
+  $('eventYM').classList.toggle('hidden');
+  $('toggleYM').textContent = $('eventYM').classList.contains('hidden') ? '年・月を変更' : '年・月を閉じる';
+};
+
+// ==================== 並走者 (Runners) 管理 ====================
+function addRunnerRow(data={}){
+  const tr = document.createElement('tr');
+  const slots = (data.slots && data.slots.length) ? data.slots : [{start:'09:00', end:'12:00'}];
+
+  tr.innerHTML = `
+    <td><input class="runner-name" placeholder="並走者名" value="${data.name||''}"></td>
+    <td><input class="runner-total" type="number" step="any" placeholder="総合力" value="${data.total??''}"></td>
+    <td>
+      <div class="time-slot-list runner-slots"></div>
+      <button type="button" class="add-time-slot add-runner-slot">＋ プレイ時間を追加</button>
+    </td>
+    <td><button type="button" class="danger remove-runner">削除</button></td>
+  `;
+
+  const list = tr.querySelector('.runner-slots');
+
+  function addSlotRow(slotData={}){
+    const row = document.createElement('div');
+    row.className = 'time-slot-row';
+    row.innerHTML = `
+      <select class="r-start">${timeOptionsForSelect(slotData.start||'09:00')}</select>
+      <span>～</span>
+      <select class="r-end">${timeOptionsForSelect(slotData.end||'12:00')}</select>
+      <button type="button" class="danger remove-slot" style="padding:4px 7px;">×</button>
+    `;
+    row.querySelector('.remove-slot').onclick = () => {
+      if(list.children.length > 1) row.remove();
+      saveCurrentTab();
+    };
+    list.appendChild(row);
+  }
+
+  slots.forEach(addSlotRow);
+
+  tr.querySelector('.add-runner-slot').onclick = (e) => {
+    e.preventDefault();
+    addSlotRow();
+    saveCurrentTab();
+  };
+
+  tr.querySelector('.remove-runner').onclick = (e) => {
+    e.preventDefault();
+    tr.remove();
+    saveCurrentTab();
+  };
+
+  for(const c of tr.querySelectorAll('input, select')) {
+    c.oninput = () => saveCurrentTab();
+    c.onchange = () => saveCurrentTab();
+  }
+
+  $('runnerBody').appendChild(tr);
+}
+
+$('addRunner').onclick = () => { addRunnerRow(); saveCurrentTab(); };
+
+
+// ==================== 支援者 (Supporters) 管理 ====================
+function addSupporterRow(data={}){
+  const tr = document.createElement('tr');
+  const slots = (data.slots && data.slots.length) ? data.slots : [{start:'09:00', end:'18:00'}];
+
+  tr.innerHTML = `
+    <td><input class="person" placeholder="支援者名" value="${data.name||''}"></td>
+    <td><input class="small first" type="number" step="any" value="${data.first??''}"></td>
+    <td><input class="small internal" type="number" step="any" value="${data.internal??''}"></td>
+    <td><input class="small total" type="number" step="any" value="${data.total??''}"></td>
+    <td><input class="small direct-effective" type="number" step="any" placeholder="直接入力" value="${data.directEffective??''}"></td>
+    <td>
+      <div class="time-slot-list supporter-slots"></div>
+      <button type="button" class="add-time-slot add-supporter-slot">＋ 時間を追加</button>
+    </td>
+    <td>
+      <button type="button" class="secondary details-toggle">詳細設定</button>
+      <div class="details-panel hidden" style="margin-top:6px;padding:8px;border:1px solid var(--border);border-radius:6px;background:#fafbfc;min-width:140px;">
+        <div style="margin-bottom:6px;font-size:13px;">
+          <div>最大シフト時間</div>
+          <input class="small max-hours" type="number" min="0" step="1" placeholder="無制限" value="${data.maxHours??''}" style="font-size:13px;padding:5px 6px;margin-top:2px;">時間
+        </div>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer;margin:0;">
+          <input class="no-wait-check" type="checkbox" ${data.waitOk===false?'checked':''} style="width:14px;height:14px;cursor:pointer;">
+          <span>待機×</span>
+        </label>
+      </div>
+    </td>
+    <td><button type="button" class="danger remove-supporter">削除</button></td>
+  `;
+
+  const list = tr.querySelector('.supporter-slots');
+
+  function addSlotRow(slotData={}){
+    const row = document.createElement('div');
+    row.className = 'time-slot-row';
+    row.innerHTML = `
+      <select class="s-start">${timeOptionsForSelect(slotData.start||'09:00')}</select>
+      <span>～</span>
+      <select class="s-end">${timeOptionsForSelect(slotData.end||'18:00')}</select>
+      <button type="button" class="danger remove-slot" style="padding:4px 7px;">×</button>
+    `;
+    row.querySelector('.remove-slot').onclick = () => {
+      if(list.children.length > 1) row.remove();
+      saveCurrentTab();
+    };
+    list.appendChild(row);
+  }
+
+  slots.forEach(addSlotRow);
+
+  tr.querySelector('.add-supporter-slot').onclick = (e) => {
+    e.preventDefault();
+    addSlotRow();
+    saveCurrentTab();
+  };
+
+  tr.querySelector('.remove-supporter').onclick = (e) => {
+    e.preventDefault();
+    tr.remove();
+    saveCurrentTab();
+  };
+
+  tr.querySelector('.details-toggle').onclick = () => {
+    const panel = tr.querySelector('.details-panel');
+    panel.classList.toggle('hidden');
+  };
+
+  for(const c of tr.querySelectorAll('input, select')) {
+    c.oninput = () => saveCurrentTab();
+    c.onchange = () => saveCurrentTab();
+  }
+
+  $('supporterBody').appendChild(tr);
+}
+
+$('addSupporter').onclick = () => { addSupporterRow(); saveCurrentTab(); };
+
+// 支援者の実効値計算ロジック（算出値優先、計算できなければ直接入力値）
+function getSupporterEffective(tr){
+  const first = parseFloat(tr.querySelector('.first').value);
+  const internal = parseFloat(tr.querySelector('.internal').value);
+  const direct = parseFloat(tr.querySelector('.direct-effective').value);
+
+  if(Number.isFinite(first) && Number.isFinite(internal)){
+    return Math.floor(((internal - first) / 5) + first);
+  }
+  if(Number.isFinite(direct)){
+    return direct;
+  }
+  return NaN;
+}
+
+$('sortByEffective').onclick = () => {
+  const rows = [...$('supporterBody').querySelectorAll('tr')];
+  rows.sort((a,b)=>{
+    const ea = getSupporterEffective(a);
+    const eb = getSupporterEffective(b);
+    const va = Number.isFinite(ea) ? ea : -Infinity;
+    const vb = Number.isFinite(eb) ? eb : -Infinity;
+    if(vb !== va) return vb - va;
+
+    const ta = parseFloat(a.querySelector('.total')?.value);
+    const tb = parseFloat(b.querySelector('.total')?.value);
+    return (Number.isFinite(tb) ? tb : -Infinity) - (Number.isFinite(ta) ? ta : -Infinity);
+  });
+  rows.forEach(row => $('supporterBody').appendChild(row));
+  saveCurrentTab();
+};
+
+
+// ==================== マトリックス表作成機構 ====================
+function parseHourValue(timeStr){
+  const [h] = timeStr.split(':').map(Number);
+  return h; // 0〜28
+}
+
+$('makeTable').onclick = () => {
+  const startH = parseHourValue($('startTime').value);
+  const endH = parseHourValue($('endTime').value);
+
+  if(endH <= startH){
+    $('result').innerHTML = '<div class="status warn">終了時刻は開始時刻より後に設定してください。</div>';
+    return;
+  }
+
+  // 時間枠の配列生成 (例: startH=9, endH=18 なら 9~10, 10~11, ..., 17~18)
+  const timeSlots = [];
+  for(let h = startH; h < endH; h++){
+    timeSlots.push({ start: h, end: h+1 });
+  }
+
+  // 1. 並走者のデータ収集
+  const runners = [...$('runnerBody').querySelectorAll('tr')].map((tr, i) => {
+    const name = tr.querySelector('.runner-name').value.trim() || `並走者${i+1}`;
+    const total = tr.querySelector('.runner-total').value;
+    const slots = [...tr.querySelectorAll('.time-slot-row')].map(row => ({
+      start: parseHourValue(row.querySelector('.r-start').value),
+      end: parseHourValue(row.querySelector('.r-end').value)
+    }));
+    return { name, total, slots };
+  });
+
+  // 2. 支援者のデータ収集と実効値降順ソート
+  let supporters = [...$('supporterBody').querySelectorAll('tr')].map((tr, i) => {
+    const name = tr.querySelector('.person').value.trim() || `支援者${i+1}`;
+    const effective = getSupporterEffective(tr);
+    const maxHours = tr.querySelector('.max-hours')?.value;
+    const waitOk = !(tr.querySelector('.no-wait-check')?.checked);
+    const slots = [...tr.querySelectorAll('.time-slot-row')].map(row => ({
+      start: parseHourValue(row.querySelector('.s-start').value),
+      end: parseHourValue(row.querySelector('.s-end').value)
+    }));
+    return { name, effective, maxHours, waitOk, slots };
+  });
+
+  // 実効値が高い順（降順）に並び替え
+  supporters.sort((a, b) => {
+    const va = Number.isFinite(a.effective) ? a.effective : -Infinity;
+    const vb = Number.isFinite(b.effective) ? b.effective : -Infinity;
+    return vb - va;
+  });
+
+  if(runners.length === 0 && supporters.length === 0){
+    $('result').innerHTML = '<div class="status warn">並走者または支援者を1人以上入力してください。</div>';
+    return;
+  }
+
+  // テーブルHTML生成
+  let html = '<div class="matrix-wrap"><table class="shift-matrix"><thead><tr><th>名前 / 時間</th>';
+  
+  for(const slot of timeSlots){
+    const sh = pad(slot.start % 24);
+    const eh = pad(slot.end % 24);
+    html += `<th>${sh}~${eh}</th>`;
+  }
+  html += '</tr></thead><tbody>';
+
+  // --- 並走者セクション ---
+  if(runners.length > 0){
+    html += `<tr><td colspan="${timeSlots.length + 1}" class="category-header">【並走者】</td></tr>`;
+    for(const r of runners){
+      html += `<tr><td><strong>${escapeHtml(r.name)}</strong></td>`;
+      for(const slot of timeSlots){
+        const isPlaying = r.slots.some(s => s.start <= slot.start && s.end >= slot.end);
+        if(isPlaying){
+          html += `<td class="matrix-runner">プレイ中</td>`;
+        } else {
+          html += `<td class="matrix-empty">-</td>`;
+        }
+      }
+      html += `</tr>`;
+    }
+  }
+
+  // --- 支援者セクション ---
+  const noteItems = [];
+  if(supporters.length > 0){
+    html += `<tr><td colspan="${timeSlots.length + 1}" class="category-header">【支援者（実効値順）】</td></tr>`;
+    for(const s of supporters){
+      const effText = Number.isFinite(s.effective) ? `実効値: ${s.effective}` : '実効値: -';
+      html += `<td><strong>${escapeHtml(s.name)}</strong><br><span style="font-size:11px;color:#666;">(${effText})</span></td>`;
+      
+      for(const slot of timeSlots){
+        const isAvailable = s.slots.some(sl => sl.start <= slot.start && sl.end >= slot.end);
+        if(isAvailable){
+          html += `<td class="matrix-supporter">可能</td>`;
+        } else {
+          html += `<td class="matrix-empty">-</td>`;
+        }
+      }
+      html += `</tr>`;
+
+      // 詳細設定の注記を収集
+      const hasMax = s.maxHours !== '' && s.maxHours !== undefined && !isNaN(Number(s.maxHours));
+      const hasWait = s.waitOk === false;
+      if(hasMax || hasWait){
+        let noteStr = `<strong>${escapeHtml(s.name)}</strong>: `;
+        const details = [];
+        if(hasMax) details.push(`最大シフト時間 ${s.maxHours}時間`);
+        if(hasWait) details.push(`待機NG (待機×)`);
+        noteStr += details.join(' / ');
+        noteItems.push(noteStr);
+      }
+    }
+  }
+
+  html += '</tbody></table></div>';
+
+  // ※印や注記の追記表示セクション
+  if(noteItems.length > 0){
+    html += `
+      <div class="notes-section">
+        <h4>※ 詳細設定の注記</h4>
+        <ul>
+          ${noteItems.map(n => `<li>${n}</li>`).join('')}
+        </ul>
+      </div>
+    `;
+  }
+
+  $('result').innerHTML = html;
+};
+
+function escapeHtml(str){
+  return str.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+
+// ==================== マルチタブ機能 & LocalStorage保存 ====================
+function renderTabs(){
+  const tabList = $('tabList');
+  tabList.innerHTML = '';
+
+  appState.tabs.forEach(tab => {
+    const isActive = tab.id === appState.activeTabId;
+    const tabEl = document.createElement('div');
+    tabEl.className = `tab-item ${isActive ? 'active' : ''}`;
+    
+    const titleInput = document.createElement('input');
+    titleInput.type = 'text';
+    titleInput.value = tab.title;
+    titleInput.oninput = (e) => {
+      tab.title = e.target.value;
+      saveAllTabsToStorage();
+    };
+    titleInput.onclick = (e) => e.stopPropagation();
+
+    tabEl.appendChild(titleInput);
+
+    if(appState.tabs.length > 1){
+      const closeBtn = document.createElement('button');
+      closeBtn.className = 'tab-close';
+      closeBtn.textContent = '×';
+      closeBtn.title = 'タブを削除';
+      closeBtn.onclick = (e) => {
+        e.stopPropagation();
+        deleteTab(tab.id);
+      };
+      tabEl.appendChild(closeBtn);
+    }
+
+    tabEl.onclick = () => {
+      if(appState.activeTabId !== tab.id){
+        saveCurrentTab();
+        appState.activeTabId = tab.id;
+        loadCurrentTab();
+        renderTabs();
+      }
+    };
+
+    tabList.appendChild(tabEl);
+  });
+}
+
+function addTab(){
+  saveCurrentTab();
+  const newId = 'tab_' + Date.now();
+  const newTitle = `${appState.tabs.length + 1}日目`;
+  appState.tabs.push({ id: newId, title: newTitle, data: null });
+  appState.activeTabId = newId;
+  loadCurrentTab();
+  renderTabs();
+  saveAllTabsToStorage();
+}
+
+$('addTabBtn').onclick = addTab;
+
+function deleteTab(id){
+  if(appState.tabs.length <= 1) return;
+  const idx = appState.tabs.findIndex(t => t.id === id);
+  if(idx === -1) return;
+
+  appState.tabs.splice(idx, 1);
+  if(appState.activeTabId === id){
+    appState.activeTabId = appState.tabs[Math.max(0, idx - 1)].id;
+  }
+  loadCurrentTab();
+  renderTabs();
+  saveAllTabsToStorage();
+}
+
+function getActiveTab(){
+  return appState.tabs.find(t => t.id === appState.activeTabId) || appState.tabs[0];
+}
+
+function saveCurrentTab(){
+  const tab = getActiveTab();
+  tab.data = {
+    event: {
+      year: $('year').value,
+      month: $('month').value,
+      targetDay: $('targetDay').value,
+      startTime: $('startTime').value,
+      endTime: $('endTime').value,
+      ymOpen: !$('eventYM').classList.contains('hidden')
+    },
+    runners: [...$('runnerBody').querySelectorAll('tr')].map(tr => ({
+      name: tr.querySelector('.runner-name').value,
+      total: tr.querySelector('.runner-total').value,
+      slots: [...tr.querySelectorAll('.time-slot-row')].map(row => ({
+        start: row.querySelector('.r-start').value,
+        end: row.querySelector('.r-end').value
+      }))
+    })),
+    supporters: [...$('supporterBody').querySelectorAll('tr')].map(tr => ({
+      name: tr.querySelector('.person').value,
+      first: tr.querySelector('.first').value,
+      internal: tr.querySelector('.internal').value,
+      total: tr.querySelector('.total').value,
+      directEffective: tr.querySelector('.direct-effective').value,
+      maxHours: tr.querySelector('.max-hours')?.value ?? '',
+      waitOk: !(tr.querySelector('.no-wait-check')?.checked),
+      slots: [...tr.querySelectorAll('.time-slot-row')].map(row => ({
+        start: row.querySelector('.s-start').value,
+        end: row.querySelector('.s-end').value
+      }))
+    }))
+  };
+  saveAllTabsToStorage();
+}
+
+function loadCurrentTab(){
+  const tab = getActiveTab();
+  const data = tab.data;
+
+  // 初期化
+  $('runnerBody').innerHTML = '';
+  $('supporterBody').innerHTML = '';
+  $('result').innerHTML = '';
+
+  if(data && data.event){
+    if(data.event.year) $('year').value = data.event.year;
+    if(data.event.month) $('month').value = data.event.month;
+    updateEventFormOptions();
+    if(data.event.targetDay) $('targetDay').value = data.event.targetDay;
+    if(data.event.startTime) $('startTime').value = data.event.startTime;
+    if(data.event.endTime) $('endTime').value = data.event.endTime;
+
+    if(data.event.ymOpen){
+      $('eventYM').classList.remove('hidden');
+      $('toggleYM').textContent = '年・月を閉じる';
+    } else {
+      $('eventYM').classList.add('hidden');
+      $('toggleYM').textContent = '年・月を変更';
+    }
+  } else {
+    updateEventFormOptions();
+  }
+
+  updateEventSummary();
+
+  if(data && data.runners && data.runners.length > 0){
+    data.runners.forEach(r => addRunnerRow(r));
+  } else {
+    addRunnerRow();
+  }
+
+  if(data && data.supporters && data.supporters.length > 0){
+    data.supporters.forEach(s => addSupporterRow(s));
+  } else {
+    addSupporterRow();
+    addSupporterRow();
+  }
+}
+
+function saveAllTabsToStorage(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+    const status = $('saveStatus');
+    if(status){
+      status.textContent = '自動保存済み';
+      clearTimeout(window.__saveTimer);
+      window.__saveTimer = setTimeout(() => { status.textContent = ''; }, 1500);
+    }
+  }catch(e){
+    console.warn('ストレージ保存エラー:', e);
+  }
+}
+
+function loadAllTabsFromStorage(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return false;
+    const parsed = JSON.parse(raw);
+    if(parsed && Array.isArray(parsed.tabs) && parsed.tabs.length > 0){
+      appState = parsed;
+      return true;
+    }
+  }catch(e){
+    console.warn('ストレージ読み込みエラー:', e);
+  }
+  return false;
+}
+
+$('clearTabData').onclick = () => {
+  if(!confirm('現在のタブの入力データを初期化しますか？')) return;
+  const tab = getActiveTab();
+  tab.data = null;
+  loadCurrentTab();
+  saveAllTabsToStorage();
+};
+
+
+// ==================== Excel形式コピー機能 ====================
+function copyMatrixTableExcel(){
+  const table = $('result').querySelector('.shift-matrix');
+  if(!table) return false;
+
+  const clone = table.cloneNode(true);
+  clone.style.borderCollapse = 'collapse';
+
+  const wrapper = document.createElement('div');
+  wrapper.style.position = 'fixed';
+  wrapper.style.left = '-100000px';
+  wrapper.style.top = '0';
+  wrapper.appendChild(clone);
+  document.body.appendChild(wrapper);
+
+  let copied = false;
+  const onCopy = (e) => {
+    const htmlData = clone.outerHTML;
+    const plain = [...clone.rows].map(row => {
+      return [...row.cells].map(cell => cell.innerText.replace(/\r?\n/g, ' ').trim()).join('\t');
+    }).join('\n');
+
+    e.clipboardData.setData('text/html', htmlData);
+    e.clipboardData.setData('text/plain', plain);
+    e.preventDefault();
+    copied = true;
+  };
+
+  document.addEventListener('copy', onCopy, { once: true });
+
+  const range = document.createRange();
+  range.selectNodeContents(clone);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+
+  try{
+    document.execCommand('copy');
+  }catch(e){
+    copied = false;
+  }
+
+  sel.removeAllRanges();
+  wrapper.remove();
+  return copied;
+}
+
+if($('discordShare')){
+  $('discordShare').onclick = () => {
+    const btn = $('discordShare');
+    const old = btn.textContent;
+
+    if(!$('result').querySelector('.shift-matrix')){
+      $('result').insertAdjacentHTML('afterbegin', '<div class="status warn">先にマトリックス表を作成してください。</div>');
+      return;
+    }
+
+    const copied = copyMatrixTableExcel();
+    btn.textContent = copied ? 'コピーしました！' : 'Ctrl+Cでコピーしてください';
+    setTimeout(() => { btn.textContent = old; }, 1500);
+  };
+}
+
+
+// 初期起動処理
+if(!loadAllTabsFromStorage()){
+  appState = {
+    activeTabId: 'tab_1',
+    tabs: [
+      { id: 'tab_1', title: '1日目', data: null }
+    ]
+  };
+}
+
+renderTabs();
+loadCurrentTab();
+
+</script>
+</body>
+</html>
