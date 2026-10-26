@@ -127,7 +127,7 @@
     <!-- Section 2: Runners (並走者 - 共通マスタ) -->
     <section class="card">
       <h2 class="text-lg font-semibold mb-1">2. 並走者</h2>
-      <p class="hint mb-3">名前・総合力はタブをまたいでも共通保持されます。プレイ予定時間はこのタブごとに設定できます。</p>
+      <p class="hint mb-3">名前・総合力はタブをまたいでも共通保持されます。プレイ予定時間はこのタブごとに設定できます（未設定のメンバーは表に表示されません）。</p>
       <div class="table-wrap">
         <table>
           <thead>
@@ -150,7 +150,7 @@
     <section class="card">
       <h2 class="text-lg font-semibold mb-1">3. 支援者</h2>
       <p class="hint mb-3">
-        名前・先頭値・内部値・総合力はタブをまたいでも共通保持されます。実効値は算出値優先（直接入力も可）。シフト可能時間はこのタブごとに設定できます。<br>
+        名前・先頭値・内部値・総合力はタブをまたいでも共通保持されます。実効値は算出値優先（直接入力も可）。シフト可能時間はこのタブごとに設定できます（未設定のメンバーは表に表示されません）。<br>
         <span style="color:#b33; font-weight:600;">⚠ WLの場合は33.6万以上の総合力を入力しないでください。</span>
       </p>
       <div class="table-wrap">
@@ -173,7 +173,7 @@
     <section class="card">
       <h2 class="text-lg font-semibold mb-1">4. タイムテーブル</h2>
       <p class="hint mb-3">
-        並走者を上部に、支援者を実効値順に配置したマトリックス表です。合計人数行は人数に応じて色分けされます（<strong>緑</strong>: 5人 / <strong>黄橙</strong>: 5人未満 / <strong>赤</strong>: 5人超）。名前の後ろの ※印 から下部注記をご確認いただけます。
+        シフト可能時間を設定した並走者・支援者のみを対象としたマトリックス表です。合計人数行は人数に応じて色分けされます（<strong>緑</strong>: 5人 / <strong>黄橙</strong>: 5人未満 / <strong>赤</strong>: 5人超）。名前の後ろの ※印 から下部注記をご確認いただけます。
       </p>
       <div class="controls">
         <button type="button" class="secondary" id="discordShare">表をエクセル形式でコピー</button>
@@ -189,7 +189,7 @@
 const $ = id => document.getElementById(id);
 const pad = n => String(n).padStart(2,'0');
 
-const STORAGE_KEY = 'shift_manager_app_state_v4';
+const STORAGE_KEY = 'shift_manager_app_state_v5';
 
 // アプリケーション状態
 let appState = {
@@ -343,7 +343,7 @@ function renderRunners(){
         <button type="button" class="danger remove-slot" style="padding:4px 7px;">×</button>
       `;
       row.querySelector('.remove-slot').onclick = () => {
-        if(list.children.length > 1) row.remove();
+        row.remove();
         syncRunnersFromDOM();
         triggerAutoUpdate();
       };
@@ -353,9 +353,9 @@ function renderRunners(){
       list.appendChild(row);
     }
 
-    const slots = (tab.runnerSchedules[runner.id] && tab.runnerSchedules[runner.id].length > 0) 
+    const slots = (tab.runnerSchedules[runner.id] && Array.isArray(tab.runnerSchedules[runner.id])) 
       ? tab.runnerSchedules[runner.id] 
-      : [{start:'12:00', end:'24:00'}];
+      : [];
     slots.forEach(addSlotRow);
 
     tr.querySelector('.add-runner-slot').onclick = (e) => {
@@ -412,7 +412,7 @@ $('addRunner').onclick = () => {
   });
   const tab = getActiveTab();
   if(!tab.runnerSchedules) tab.runnerSchedules = {};
-  tab.runnerSchedules[newId] = [{start:'12:00', end:'24:00'}];
+  tab.runnerSchedules[newId] = [];
   renderRunners();
   triggerAutoUpdate();
 };
@@ -428,7 +428,7 @@ function renderSupporters(){
     const tr = document.createElement('tr');
     tr.dataset.id = sup.id;
 
-    const supData = tab.supporterSchedules[sup.id] || { slots: [{start:'12:00', end:'24:00'}], maxHours: '', waitOk: true };
+    const supData = tab.supporterSchedules[sup.id] || { slots: [], maxHours: '', waitOk: true };
 
     tr.innerHTML = `
       <td><input class="person" placeholder="支援者名" value="${escapeHtml(sup.name||'')}"></td>
@@ -468,7 +468,7 @@ function renderSupporters(){
         <button type="button" class="danger remove-slot" style="padding:4px 7px;">×</button>
       `;
       row.querySelector('.remove-slot').onclick = () => {
-        if(list.children.length > 1) row.remove();
+        row.remove();
         syncSupportersFromDOM();
         triggerAutoUpdate();
       };
@@ -478,7 +478,7 @@ function renderSupporters(){
       list.appendChild(row);
     }
 
-    const slots = (supData.slots && supData.slots.length > 0) ? supData.slots : [{start:'12:00', end:'24:00'}];
+    const slots = (supData.slots && Array.isArray(supData.slots)) ? supData.slots : [];
     slots.forEach(addSlotRow);
 
     tr.querySelector('.add-supporter-slot').onclick = (e) => {
@@ -551,7 +551,7 @@ $('addSupporter').onclick = () => {
   });
   const tab = getActiveTab();
   if(!tab.supporterSchedules) tab.supporterSchedules = {};
-  tab.supporterSchedules[newId] = { slots: [{start:'12:00', end:'24:00'}], maxHours: '', waitOk: true };
+  tab.supporterSchedules[newId] = { slots: [], maxHours: '', waitOk: true };
   renderSupporters();
   triggerAutoUpdate();
 };
@@ -611,32 +611,38 @@ function generateMatrixTable(){
   const runnerSch = tab.runnerSchedules || {};
   const supporterSch = tab.supporterSchedules || {};
 
-  const runners = appState.globalRunners.map((r, i) => ({
-    name: r.name.trim() || `並走者${i+1}`,
-    slots: (runnerSch[r.id] || []).map(s => ({ start: parseMinutes(s.start), end: parseMinutes(s.end) }))
-  }));
+  // シフト時間（スロット）が設定されている並走者のみフィルタリング
+  const runners = appState.globalRunners
+    .map((r, i) => ({
+      name: r.name.trim() || `並走者${i+1}`,
+      slots: (runnerSch[r.id] || []).map(s => ({ start: parseMinutes(s.start), end: parseMinutes(s.end) }))
+    }))
+    .filter(r => r.slots.length > 0);
 
-  let supporters = appState.globalSupporters.map((s, i) => {
-    const effective = getSupporterEffective(s);
-    const supExtra = supporterSch[s.id] || {};
-    const maxHours = supExtra.maxHours;
-    const waitOk = supExtra.waitOk;
-    const hasMax = maxHours !== '' && maxHours !== undefined && !isNaN(Number(maxHours));
-    const hasWait = waitOk === false;
-    const hasDetails = hasMax || hasWait;
+  // シフト時間（スロット）が設定されている支援者のみフィルタリング
+  let supporters = appState.globalSupporters
+    .map((s, i) => {
+      const effective = getSupporterEffective(s);
+      const supExtra = supporterSch[s.id] || {};
+      const maxHours = supExtra.maxHours;
+      const waitOk = supExtra.waitOk;
+      const hasMax = maxHours !== '' && maxHours !== undefined && !isNaN(Number(maxHours));
+      const hasWait = waitOk === false;
+      const hasDetails = hasMax || hasWait;
 
-    let detailTexts = [];
-    if(hasMax) detailTexts.push(`最大シフト時間 ${maxHours}時間`);
-    if(hasWait) detailTexts.push(`待機NG`);
+      let detailTexts = [];
+      if(hasMax) detailTexts.push(`最大シフト時間 ${maxHours}時間`);
+      if(hasWait) detailTexts.push(`待機NG`);
 
-    return {
-      name: s.name.trim() || `支援者${i+1}`,
-      effective,
-      hasDetails,
-      detailTexts,
-      slots: (supExtra.slots || []).map(sl => ({ start: parseMinutes(sl.start), end: parseMinutes(sl.end) }))
-    };
-  });
+      return {
+        name: s.name.trim() || `支援者${i+1}`,
+        effective,
+        hasDetails,
+        detailTexts,
+        slots: (supExtra.slots || []).map(sl => ({ start: parseMinutes(sl.start), end: parseMinutes(sl.end) }))
+      };
+    })
+    .filter(s => s.slots.length > 0);
 
   supporters.sort((a, b) => {
     const va = Number.isFinite(a.effective) ? a.effective : -Infinity;
@@ -645,7 +651,7 @@ function generateMatrixTable(){
   });
 
   if(runners.length === 0 && supporters.length === 0){
-    $('result').innerHTML = '<div class="status hint">並走者または支援者を追加するとマトリックス表がここに表示されます。</div>';
+    $('result').innerHTML = '<div class="status hint">並走者または支援者にシフト可能時間（プレイ予定時間）を設定すると、マトリックス表がここに自動表示されます。</div>';
     return;
   }
 
